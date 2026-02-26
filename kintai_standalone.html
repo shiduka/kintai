@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>農業勤怠管理システム</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #4CAF50;
+            --secondary-color: #2196F3;
+            --break-color: #FF9800;
+            --danger-color: #f44336;
+            --background-color: #f5f7fa;
+            --card-background: #ffffff;
+            --text-color: #333333;
+            --text-muted: #666666;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --border-radius: 12px;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'M PLUS Rounded 1c', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        header {
+            text-align: center;
+            padding: 10px 0;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin: 0;
+            color: var(--primary-color);
+        }
+
+        .status-card {
+            background: var(--card-background);
+            padding: 15px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            text-align: center;
+        }
+
+        .status-time {
+            font-size: 2rem;
+            font-weight: bold;
+            margin: 5px 0;
+        }
+
+        .status-date {
+            color: var(--text-muted);
+        }
+
+        select,
+        input[type="text"],
+        input[type="number"] {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.1rem;
+            border-radius: var(--border-radius);
+            border: 1px solid #ddd;
+            background-color: white;
+            font-family: inherit;
+        }
+
+        .btn {
+            border: none;
+            border-radius: var(--border-radius);
+            padding: 18px 10px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.1s, opacity 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: var(--shadow);
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+        }
+
+        .btn-secondary {
+            background-color: var(--secondary-color);
+        }
+
+        .btn-warning {
+            background-color: var(--break-color);
+        }
+
+        .btn-danger {
+            background-color: var(--danger-color);
+        }
+
+        .btn-small {
+            padding: 12px 10px;
+            font-size: 0.95rem;
+        }
+
+        label {
+            font-weight: bold;
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        /* NFC読み取りエリア */
+        .nfc-reader-area {
+            background: var(--card-background);
+            padding: 30px 20px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            text-align: center;
+        }
+
+        .nfc-icon {
+            font-size: 5rem;
+            margin-bottom: 10px;
+        }
+
+        .nfc-icon.active {
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+
+            50% {
+                transform: scale(1.1);
+                opacity: 0.7;
+            }
+        }
+
+        .nfc-status-text {
+            font-size: 1.1rem;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+
+        /* モード切替タブ */
+        .mode-switch {
+            display: flex;
+            gap: 10px;
+        }
+
+        .mode-switch button {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: var(--border-radius);
+            background: white;
+            font-family: inherit;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            color: var(--text-muted);
+        }
+
+        .mode-switch button.active {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+            background: #e8f5e9;
+        }
+
+        /* 打刻結果 */
+        .punch-result {
+            display: none;
+            background: var(--card-background);
+            padding: 20px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            text-align: center;
+        }
+
+        .punch-result.visible {
+            display: block;
+        }
+
+        .punch-result .result-icon {
+            font-size: 3rem;
+            margin-bottom: 10px;
+        }
+
+        .punch-result .result-name {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .punch-result .result-type {
+            font-size: 1.2rem;
+            color: var(--text-muted);
+            margin: 5px 0;
+        }
+
+        .punch-result .result-time {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        /* 登録フォーム */
+        .register-form {
+            display: none;
+            background: var(--card-background);
+            padding: 20px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+        }
+
+        .register-form.visible {
+            display: block;
+        }
+
+        .register-form h3 {
+            margin-top: 0;
+            color: var(--break-color);
+        }
+
+        .register-form .form-group {
+            margin-bottom: 15px;
+        }
+
+        .serial-display {
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 1rem;
+            word-break: break-all;
+            margin-bottom: 15px;
+        }
+
+        /* 設定パネル - GAS URL専用 */
+        .settings-panel {
+            background: var(--card-background);
+            padding: 20px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+        }
+
+        .settings-panel h3 {
+            margin-top: 0;
+            color: var(--text-muted);
+        }
+
+        .settings-panel .form-group {
+            margin-bottom: 15px;
+        }
+
+        .gas-url-status {
+            font-size: 0.9rem;
+            margin-top: 8px;
+            padding: 8px;
+            border-radius: 8px;
+        }
+
+        .gas-url-status.ok {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .gas-url-status.ng {
+            background: #ffebee;
+            color: var(--danger-color);
+        }
+
+        /* 管理者パネル */
+        .admin-panel {
+            display: none;
+            background: var(--card-background);
+            padding: 20px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+        }
+
+        .admin-panel.visible {
+            display: block;
+        }
+
+        .admin-panel h3 {
+            margin-top: 0;
+            color: var(--primary-color);
+        }
+
+        .staff-status-list {
+            list-style: none;
+            padding: 0;
+            margin: 10px 0;
+        }
+
+        .staff-status-list li {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .status-badge {
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .status-badge.on-duty {
+            background: #c8e6c9;
+            color: #2e7d32;
+        }
+
+        .status-badge.breaking {
+            background: #fff3e0;
+            color: #ef6c00;
+        }
+
+        .status-badge.off-duty {
+            background: #eeeeee;
+            color: #666666;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .error-banner {
+            background: #ffebee;
+            color: var(--danger-color);
+            padding: 15px;
+            border-radius: var(--border-radius);
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .history-list {
+            list-style: none;
+            padding: 0;
+            margin: 10px 0 0 0;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .history-list li {
+            padding: 8px 10px;
+            border-bottom: 1px solid #eee;
+            font-size: 0.95rem;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .bottom-links {
+            text-align: center;
+            margin-top: 10px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .bottom-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>🌾 農業 勤怠管理</h1>
+        </header>
+
+        <!-- GAS未設定時のバナー（管理者メニューへ誘導） -->
+        <div id="gas-error" class="error-banner hidden">
+            ⚠️ GAS未接続 — 管理者メニューからURLを設定してください
+        </div>
+
+        <!-- 時計 -->
+        <section class="status-card">
+            <div id="current-date" class="status-date">読み込み中...</div>
+            <div id="current-time" class="status-time">--:--:--</div>
+        </section>
+
+        <!-- NFC非対応エラー -->
+        <div id="nfc-error" class="error-banner hidden">
+            ⚠️ このブラウザはNFCに対応していません。<br>Android版Chromeをご利用ください。
+        </div>
+
+        <!-- モード切替 -->
+        <div class="mode-switch">
+            <button id="mode-reader" class="active" onclick="switchMode('reader')">📋 打刻モード</button>
+            <button id="mode-register" onclick="switchMode('register')">➕ 新規登録</button>
+        </div>
+
+        <!-- NFCリーダーエリア -->
+        <section id="nfc-reader-area" class="nfc-reader-area">
+            <div id="nfc-icon" class="nfc-icon">📱</div>
+            <div id="nfc-status" class="nfc-status-text">下のボタンを押してNFCを起動</div>
+            <button id="btn-start-nfc" class="btn btn-primary" style="margin-top: 15px;"
+                onclick="startNFCWithUserGesture()">
+                🔓 NFCを起動する
+            </button>
+        </section>
+
+        <!-- 打刻結果 -->
+        <section id="punch-result" class="punch-result">
+            <div class="result-icon" id="result-icon">✅</div>
+            <div class="result-name" id="result-name"></div>
+            <div class="result-type" id="result-type"></div>
+            <div class="result-time" id="result-time"></div>
+        </section>
+
+        <!-- 新規登録フォーム -->
+        <section id="register-form" class="register-form">
+            <h3>🆕 新規NFCタグ登録</h3>
+            <p>NFCを起動してからタグをかざしてください。</p>
+            <div id="register-serial-area" class="hidden">
+                <label>検出されたシリアル番号</label>
+                <div id="register-serial" class="serial-display">--</div>
+                <div class="form-group">
+                    <label for="register-name">名前</label>
+                    <input type="text" id="register-name" placeholder="例: 田中太郎">
+                </div>
+                <div class="form-group">
+                    <label for="register-wage">時給 (円)</label>
+                    <input type="number" id="register-wage" placeholder="例: 1000" value="1000">
+                </div>
+                <button class="btn btn-warning" onclick="registerTag()">登録する</button>
+            </div>
+        </section>
+
+        <!-- 本日の打刻履歴 -->
+        <section class="status-card">
+            <h3 style="margin-top:0;">📝 本日の打刻履歴</h3>
+            <ul id="history-list" class="history-list">
+                <li style="color: var(--text-muted);">まだ打刻がありません</li>
+            </ul>
+        </section>
+
+        <!-- 管理者パネル -->
+        <section id="admin-panel" class="admin-panel">
+            <h3>📊 管理者メニュー</h3>
+            <h4>スタッフ稼働状況</h4>
+            <ul id="staff-status-list" class="staff-status-list"></ul>
+            <button class="btn btn-secondary btn-small" onclick="exportCSV()" style="margin-top:10px;">CSV出力</button>
+
+            <hr style="margin: 20px 0; border: none; border-top: 1px solid #eee;">
+            <h4>⚙️ GAS接続設定</h4>
+            <div class="form-group" style="margin-bottom:10px;">
+                <label for="gas-url">GAS WebアプリURL</label>
+                <input type="text" id="gas-url" placeholder="https://script.google.com/macros/s/xxxxx/exec">
+            </div>
+            <button class="btn btn-primary btn-small" onclick="saveGasUrl()">保存</button>
+            <div id="gas-url-status" class="gas-url-status ng" style="margin-top:8px;">❌ 未設定</div>
+        </section>
+
+        <div class="bottom-links">
+            <a href="#" onclick="toggleAdmin(event)">📊 管理者メニュー</a>
+        </div>
+    </div>
+
+    <script>
+        // ===== 定数 =====
+        const COOLDOWN_MS = 3000;
+        let lastPunchTime = 0;
+        let currentMode = 'reader';
+        let pendingSerialNo = null;
+        let nfcStarted = false;
+
+        // GAS URLをlocalStorageから取得
+        let GAS_URL = localStorage.getItem('kintai_gas_url') || '';
+
+        // ===== 初期化 =====
+        function init() {
+            updateClock();
+            setInterval(updateClock, 1000);
+
+            // GAS URL表示
+            document.getElementById('gas-url').value = GAS_URL;
+            updateGasUrlStatus();
+
+            // NFC対応チェック（起動はしない。ボタンクリックで起動する）
+            if (!('NDEFReader' in window)) {
+                document.getElementById('nfc-error').classList.remove('hidden');
+                document.getElementById('btn-start-nfc').disabled = true;
+                document.getElementById('btn-start-nfc').textContent = '❌ NFC非対応';
+                document.getElementById('nfc-status').textContent = 'NFC非対応のブラウザです';
+            }
+
+            if (GAS_URL) {
+                loadTodayHistory();
+            }
+        }
+
+        // ===== 時計 =====
+        function updateClock() {
+            const now = new Date();
+            const opts = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' };
+            document.getElementById('current-date').textContent = now.toLocaleDateString('ja-JP', opts);
+            document.getElementById('current-time').textContent = now.toLocaleTimeString('ja-JP', { hour12: false });
+        }
+
+        // ===== GAS URL管理 =====
+        function saveGasUrl() {
+            const url = document.getElementById('gas-url').value.trim();
+            if (!url) {
+                alert('URLを入力してください');
+                return;
+            }
+            GAS_URL = url;
+            localStorage.setItem('kintai_gas_url', url);
+            updateGasUrlStatus();
+            alert('GAS URLを保存しました！');
+            loadTodayHistory();
+        }
+
+        function updateGasUrlStatus() {
+            const el = document.getElementById('gas-url-status');
+            const banner = document.getElementById('gas-error');
+
+            if (GAS_URL) {
+                el.className = 'gas-url-status ok';
+                el.textContent = '✅ 設定済み';
+                banner.classList.add('hidden');
+            } else {
+                el.className = 'gas-url-status ng';
+                el.textContent = '❌ 未設定 — GASのWebアプリURLを入力してください';
+                banner.classList.remove('hidden');
+            }
+        }
+
+        // ===== GAS API呼び出し =====
+        async function callGasGet(action) {
+            if (!GAS_URL) throw new Error('GAS URLが未設定です');
+            const url = `${GAS_URL}?action=${encodeURIComponent(action)}`;
+            const response = await fetch(url);
+            return response.json();
+        }
+
+        async function callGasPost(action, data) {
+            if (!GAS_URL) throw new Error('GAS URLが未設定です');
+            const response = await fetch(GAS_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain' },
+                body: JSON.stringify({ action: action, data: data })
+            });
+            return response.json();
+        }
+
+        // ===== NFCをユーザージェスチャーで起動 =====
+        async function startNFCWithUserGesture() {
+            if (nfcStarted) return;
+
+            const btn = document.getElementById('btn-start-nfc');
+            btn.disabled = true;
+            btn.textContent = '起動中...';
+
+            try {
+                const reader = new NDEFReader();
+                await reader.scan();
+
+                nfcStarted = true;
+                btn.classList.add('hidden');
+                document.getElementById('nfc-icon').classList.add('active');
+                document.getElementById('nfc-status').textContent = '✅ NFC起動中 — タグをかざしてください';
+
+                reader.addEventListener('reading', ({ serialNumber }) => {
+                    handleNFCRead(serialNumber);
+                });
+
+                reader.addEventListener('readingerror', () => {
+                    document.getElementById('nfc-status').textContent = '読み取りエラー。もう一度かざしてください。';
+                });
+            } catch (error) {
+                console.error('NFC起動エラー:', error);
+                btn.disabled = false;
+                btn.textContent = '🔓 NFCを起動する（再試行）';
+                document.getElementById('nfc-status').textContent = 'NFCの起動に失敗: ' + error.message;
+            }
+        }
+
+        // ===== NFCタグ読み取り =====
+        function handleNFCRead(serialNumber) {
+            const now = Date.now();
+            if (now - lastPunchTime < COOLDOWN_MS) return;
+            lastPunchTime = now;
+
+            if (navigator.vibrate) navigator.vibrate(200);
+
+            if (currentMode === 'register') {
+                handleRegisterScan(serialNumber);
+            } else {
+                handlePunchScan(serialNumber);
+            }
+        }
+
+        // ===== 打刻処理 =====
+        async function handlePunchScan(serialNumber) {
+            const now = new Date();
+            const roundedMin = Math.floor(now.getMinutes() / 5) * 5;
+            const punchTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), roundedMin);
+            const timeStr = `${punchTime.getHours().toString().padStart(2, '0')}:${punchTime.getMinutes().toString().padStart(2, '0')}`;
+
+            document.getElementById('nfc-status').textContent = '📡 通信中...';
+
+            if (!GAS_URL) {
+                showPunchResult('⚠️', 'GAS未設定', 'URLを設定してください', timeStr);
+                return;
+            }
+
+            try {
+                const result = await callGasPost('recordPunchByNFC', {
+                    serialNumber: serialNumber,
+                    time: punchTime.toISOString(),
+                    timeDisplay: timeStr
+                });
+
+                if (result.error) {
+                    showPunchResult('❓', result.error, '', timeStr);
+                } else {
+                    showPunchResult('✅', result.name, result.type, timeStr);
+                    addHistoryItem(result.name, result.type, timeStr);
+                }
+            } catch (err) {
+                showPunchResult('❌', 'エラー', err.message, timeStr);
+            }
+
+            document.getElementById('nfc-status').textContent = '✅ NFC起動中 — 次のタグをかざしてください';
+        }
+
+        // ===== 打刻結果表示 =====
+        function showPunchResult(icon, name, type, time) {
+            document.getElementById('result-icon').textContent = icon;
+            document.getElementById('result-name').textContent = name;
+            document.getElementById('result-type').textContent = type;
+            document.getElementById('result-time').textContent = time;
+            document.getElementById('punch-result').classList.add('visible');
+
+            setTimeout(() => {
+                document.getElementById('punch-result').classList.remove('visible');
+            }, 5000);
+        }
+
+        // ===== 履歴 =====
+        function addHistoryItem(name, type, time) {
+            const list = document.getElementById('history-list');
+            if (list.children.length === 1 && list.children[0].style.color) {
+                list.innerHTML = '';
+            }
+            const li = document.createElement('li');
+            li.innerHTML = `<span>${name}：${type}</span><span>${time}</span>`;
+            list.insertBefore(li, list.firstChild);
+        }
+
+        // ===== 登録モードスキャン =====
+        function handleRegisterScan(serialNumber) {
+            pendingSerialNo = serialNumber;
+            document.getElementById('register-serial').textContent = serialNumber;
+            document.getElementById('register-serial-area').classList.remove('hidden');
+            document.getElementById('register-name').focus();
+            document.getElementById('nfc-status').textContent = '検出しました！名前を入力してください。';
+        }
+
+        // ===== タグ登録 =====
+        async function registerTag() {
+            const name = document.getElementById('register-name').value.trim();
+            const wage = parseInt(document.getElementById('register-wage').value) || 0;
+
+            if (!name) { alert('名前を入力してください'); return; }
+            if (!pendingSerialNo) { alert('NFCタグをかざしてください'); return; }
+            if (!GAS_URL) { alert('先にGAS URLを設定してください'); return; }
+
+            try {
+                const result = await callGasPost('registerNFCTag', {
+                    serialNumber: pendingSerialNo,
+                    name: name,
+                    wage: wage
+                });
+
+                if (result.error) {
+                    alert('登録エラー: ' + result.error);
+                } else {
+                    alert(`${name}さんを登録しました！`);
+                    resetRegisterForm();
+                }
+            } catch (err) {
+                alert('登録に失敗しました: ' + err.message);
+            }
+        }
+
+        function resetRegisterForm() {
+            pendingSerialNo = null;
+            document.getElementById('register-name').value = '';
+            document.getElementById('register-wage').value = '1000';
+            document.getElementById('register-serial-area').classList.add('hidden');
+            document.getElementById('nfc-status').textContent = nfcStarted
+                ? '✅ NFC起動中 — 次のタグをかざしてください'
+                : '下のボタンを押してNFCを起動';
+        }
+
+        // ===== モード切替 =====
+        function switchMode(mode) {
+            currentMode = mode;
+            document.getElementById('mode-reader').classList.toggle('active', mode === 'reader');
+            document.getElementById('mode-register').classList.toggle('active', mode === 'register');
+            document.getElementById('register-form').classList.toggle('visible', mode === 'register');
+            document.getElementById('punch-result').classList.remove('visible');
+
+            if (mode === 'register') {
+                resetRegisterForm();
+                document.getElementById('nfc-status').textContent = nfcStarted
+                    ? '登録するNFCタグをかざしてください'
+                    : '先にNFCを起動してください';
+            } else {
+                document.getElementById('nfc-status').textContent = nfcStarted
+                    ? '✅ NFC起動中 — タグをかざしてください'
+                    : '下のボタンを押してNFCを起動';
+            }
+        }
+
+        // ===== 本日の履歴 =====
+        async function loadTodayHistory() {
+            if (!GAS_URL) return;
+            try {
+                const records = await callGasGet('getTodayHistory');
+                if (records && records.length > 0) {
+                    document.getElementById('history-list').innerHTML = '';
+                    records.forEach(r => addHistoryItem(r.name, r.type, r.time));
+                }
+            } catch (e) {
+                console.warn('履歴取得失敗:', e);
+            }
+        }
+
+        // ===== 管理者パネル =====
+        function toggleAdmin(e) {
+            e.preventDefault();
+            const panel = document.getElementById('admin-panel');
+            panel.classList.toggle('visible');
+            if (panel.classList.contains('visible')) loadStaffStatus();
+        }
+
+        async function loadStaffStatus() {
+            try {
+                const list = await callGasGet('getAllStaffStatus');
+                renderStaffStatus(list);
+            } catch (e) {
+                renderStaffStatus([]);
+            }
+        }
+
+        function renderStaffStatus(list) {
+            const ul = document.getElementById('staff-status-list');
+            ul.innerHTML = '';
+            if (!list || list.length === 0) {
+                ul.innerHTML = '<li style="color:var(--text-muted);">スタッフ未登録</li>';
+                return;
+            }
+            list.forEach(s => {
+                const li = document.createElement('li');
+                const cls = s.status === 'ON_DUTY' ? 'on-duty' : (s.status === 'BREAKING' ? 'breaking' : 'off-duty');
+                const lbl = s.status === 'ON_DUTY' ? '勤務中' : (s.status === 'BREAKING' ? '休憩中' : '未出勤');
+                li.innerHTML = `<span>${s.name}</span><span class="status-badge ${cls}">${lbl}</span>`;
+                ul.appendChild(li);
+            });
+        }
+
+        // ===== CSV出力 =====
+        async function exportCSV() {
+            try {
+                if (!GAS_URL) throw new Error('GAS URLが未設定です');
+                const url = `${GAS_URL}?action=exportCSV`;
+                const response = await fetch(url);
+                const csvData = await response.text();
+                downloadCSV(csvData);
+            } catch (e) {
+                alert('CSV出力に失敗: ' + e.message);
+            }
+        }
+
+        function downloadCSV(csvData) {
+            const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+            const blob = new Blob([bom, csvData], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `勤怠記録_${new Date().toISOString().slice(0, 10)}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // 起動
+        init();
+    </script>
+</body>
+
+</html>
