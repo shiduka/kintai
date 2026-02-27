@@ -490,9 +490,14 @@
             <h4>⚙️ GAS接続設定</h4>
             <div class="form-group" style="margin-bottom:10px;">
                 <label for="gas-url">GAS WebアプリURL</label>
-                <input type="text" id="gas-url" placeholder="https://script.google.com/macros/s/xxxxx/exec">
+                <input type="text" id="gas-url" placeholder="https://script.google.com/macros/s/xxxxx/exec" readonly>
             </div>
-            <button class="btn btn-primary btn-small" onclick="saveGasUrl()">保存</button>
+            <div style="display:flex; gap:8px;">
+                <button id="btn-save-url" class="btn btn-primary btn-small" onclick="saveGasUrl()" style="flex:1;"
+                    disabled>保存</button>
+                <button id="btn-unlock-url" class="btn btn-secondary btn-small" onclick="unlockGasUrl()"
+                    style="flex:1;">🔓 変更する</button>
+            </div>
             <div id="gas-url-status" class="gas-url-status ng" style="margin-top:8px;">❌ 未設定</div>
         </section>
 
@@ -552,8 +557,25 @@
             GAS_URL = url;
             localStorage.setItem('kintai_gas_url', url);
             updateGasUrlStatus();
+            lockGasUrl();
             alert('GAS URLを保存しました！');
             loadTodayHistory();
+        }
+
+        // URL入力欄をロック（readonly）
+        function lockGasUrl() {
+            document.getElementById('gas-url').readOnly = true;
+            document.getElementById('btn-save-url').disabled = true;
+            document.getElementById('btn-unlock-url').classList.remove('hidden');
+        }
+
+        // URL入力欄のロックを解除
+        function unlockGasUrl() {
+            if (!confirm('GAS URLを変更しますか？')) return;
+            document.getElementById('gas-url').readOnly = false;
+            document.getElementById('btn-save-url').disabled = false;
+            document.getElementById('btn-unlock-url').classList.add('hidden');
+            document.getElementById('gas-url').focus();
         }
 
         function updateGasUrlStatus() {
@@ -564,10 +586,15 @@
                 el.className = 'gas-url-status ok';
                 el.textContent = '✅ 設定済み';
                 banner.classList.add('hidden');
+                lockGasUrl();
             } else {
                 el.className = 'gas-url-status ng';
                 el.textContent = '❌ 未設定 — GASのWebアプリURLを入力してください';
                 banner.classList.remove('hidden');
+                // 未設定時は最初から入力可能にする
+                document.getElementById('gas-url').readOnly = false;
+                document.getElementById('btn-save-url').disabled = false;
+                document.getElementById('btn-unlock-url').classList.add('hidden');
             }
         }
 
