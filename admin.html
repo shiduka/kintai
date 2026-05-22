@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>時間修正 - 管理者専用</title>
+    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #4CAF50;
+            --secondary-color: #2196F3;
+            --danger-color: #f44336;
+            --admin-color: #9c27b0;
+            --background-color: #f5f7fa;
+            --card-background: #ffffff;
+            --text-color: #333333;
+            --border-radius: 12px;
+        }
+
+        body {
+            font-family: 'M PLUS Rounded 1c', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        header {
+            background-color: var(--admin-color);
+            color: white;
+            padding: 15px;
+            text-align: center;
+            border-radius: var(--border-radius);
+            margin-bottom: 10px;
+        }
+        
+        h1, h2, h3 { margin: 0; }
+
+        .card {
+            background: var(--card-background);
+            padding: 20px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            font-size: 1.1rem;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            font-family: inherit;
+        }
+
+        .btn {
+            border: none;
+            border-radius: 8px;
+            padding: 15px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            background-color: var(--primary-color);
+            text-align: center;
+        }
+
+        .btn:disabled { opacity: 0.5; }
+        .btn-danger { background-color: var(--danger-color); }
+        .hidden { display: none !important; }
+
+        .record-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+        
+        .record-item input[type="time"] {
+            width: 150px;
+        }
+
+        .gas-url-status {
+            padding: 10px; border-radius: 8px; text-align: center; font-weight: bold;
+        }
+        .gas-url-status.ok { background-color: #e8f5e9; color: #2e7d32; }
+        .gas-url-status.ng { background-color: #ffebee; color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <!-- ログイン画面 -->
+    <div id="login-screen" class="container">
+        <div class="card" style="text-align: center; margin-top: 50px;">
+            <h2 style="color: var(--admin-color);">管理者ログイン</h2>
+            <p>PINコードを入力してください</p>
+            <input type="password" id="pin-input" placeholder="PINコード (デフォルト: 1234)">
+            <button class="btn" style="background-color: var(--admin-color);" onclick="login()">ログイン</button>
+        </div>
+    </div>
+
+    <!-- 管理画面 -->
+    <div id="admin-screen" class="container hidden">
+        <header>
+            <h1>時間修正 (管理者)</h1>
+            <p style="margin: 5px 0 0; font-size: 0.9rem;">出退勤時間を上書き・再計算します</p>
+        </header>
+
+        <div class="card">
+            <h3>⚙️ GAS連携設定</h3>
+            <div id="gas-url-status" class="gas-url-status ng">❌ 未設定</div>
+            <input type="text" id="gas-url" placeholder="GAS Web Apps URL">
+            <div style="display: flex; gap: 10px;">
+                <button class="btn" id="btn-save-url" onclick="saveGasUrl()" style="flex: 1;">保存</button>
+                <button class="btn btn-danger hidden" id="btn-unlock-url" onclick="unlockGasUrl()" style="flex: 1;">変更</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>🔍 データの検索</h3>
+            <label>対象日:</label>
+            <input type="date" id="search-date">
+            <label>スタッフ:</label>
+            <select id="search-staff">
+                <option value="">設定を完了してください</option>
+            </select>
+            <button class="btn" onclick="fetchRecords()" id="btn-search">履歴を取得</button>
+        </div>
+
+        <div id="records-container" class="card hidden">
+            <h3>📝 打刻履歴の修正</h3>
+            <div id="records-list"></div>
+            <p style="font-size:0.8rem; color:var(--danger-color);">※修正を保存すると、この日の実働時間・給与・休憩が自動で再計算されます。</p>
+            <button class="btn" onclick="saveRecords()" id="btn-save" style="background-color: var(--admin-color);">修正を保存して再計算</button>
+        </div>
+        
+        <div style="text-align:center; margin-top: 20px;">
+            <a href="kintai_standalone.html" style="color:var(--text-muted);">← 打刻画面に戻る</a>
+        </div>
+    </div>
+
+    <script>
+        const ADMIN_PIN = '1234';
+        let GAS_URL = localStorage.getItem('kintai_gas_url') || '';
+        let currentRecords = [];
+
+        // ===== ログイン処理 =====
+        function login() {
+            const pin = document.getElementById('pin-input').value;
+            if (pin === ADMIN_PIN) {
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('admin-screen').classList.remove('hidden');
+                initAdmin();
+            } else {
+                alert('PINコードが間違っています');
+            }
+        }
+
+        // ===== 初期化 =====
+        function initAdmin() {
+            document.getElementById('search-date').valueAsDate = new Date();
+            
+            if (GAS_URL) {
+                document.getElementById('gas-url').value = GAS_URL;
+                updateGasUrlStatus();
+                loadStaffList();
+            } else {
+                updateGasUrlStatus();
+            }
+        }
+
+        // ===== GAS連携設定 =====
+        function saveGasUrl() {
+            const url = document.getElementById('gas-url').value.trim();
+            if (!url) return alert('URLを入力してください');
+            GAS_URL = url;
+            localStorage.setItem('kintai_gas_url', url);
+            updateGasUrlStatus();
+            loadStaffList();
+            alert('GAS URLを保存しました');
+        }
+
+        function unlockGasUrl() {
+            if (!confirm('GAS URLを変更しますか？')) return;
+            document.getElementById('gas-url').readOnly = false;
+            document.getElementById('btn-save-url').disabled = false;
+            document.getElementById('btn-unlock-url').classList.add('hidden');
+        }
+
+        function updateGasUrlStatus() {
+            const el = document.getElementById('gas-url-status');
+            const input = document.getElementById('gas-url');
+            const saveBtn = document.getElementById('btn-save-url');
+            const unlockBtn = document.getElementById('btn-unlock-url');
+
+            if (GAS_URL) {
+                el.className = 'gas-url-status ok';
+                el.textContent = '✅ 設定済み';
+                input.readOnly = true;
+                saveBtn.disabled = true;
+                unlockBtn.classList.remove('hidden');
+            } else {
+                el.className = 'gas-url-status ng';
+                el.textContent = '❌ 未設定';
+                input.readOnly = false;
+                saveBtn.disabled = false;
+                unlockBtn.classList.add('hidden');
+            }
+        }
+
+        // ===== API呼び出し =====
+        async function callGasGet(action, params = '') {
+            if (!GAS_URL) throw new Error('GAS URLが未設定です');
+            const response = await fetch(`${GAS_URL}?action=${action}${params}`);
+            return response.json();
+        }
+
+        async function callGasPost(action, data) {
+            if (!GAS_URL) throw new Error('GAS URLが未設定です');
+            const response = await fetch(GAS_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain' },
+                body: JSON.stringify({ action, data })
+            });
+            return response.json();
+        }
+
+        // ===== データ処理 =====
+        async function loadStaffList() {
+            try {
+                const select = document.getElementById('search-staff');
+                select.innerHTML = '<option value="">読込中...</option>';
+                const staff = await callGasGet('getStaffList');
+                
+                select.innerHTML = '<option value="">スタッフを選択</option>';
+                staff.forEach(s => {
+                    const opt = document.createElement('option');
+                    opt.value = s.id;
+                    opt.textContent = `${s.name} (ID:${s.id})`;
+                    select.appendChild(opt);
+                });
+            } catch (e) {
+                alert('スタッフリストの取得に失敗しました: ' + e.message);
+            }
+        }
+
+        async function fetchRecords() {
+            const dateStr = document.getElementById('search-date').value.replace(/-/g, '/');
+            const staffId = document.getElementById('search-staff').value;
+            
+            if (!dateStr || !staffId) return alert('日付とスタッフを選択してください');
+
+            const btn = document.getElementById('btn-search');
+            btn.disabled = true;
+            btn.textContent = '取得中...';
+
+            try {
+                const records = await callGasGet('getStaffDailyRecords', `&date=${dateStr}&staffId=${staffId}`);
+                currentRecords = records;
+                renderRecords(records);
+            } catch (e) {
+                alert('データ取得エラー: ' + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '履歴を取得';
+            }
+        }
+
+        function renderRecords(records) {
+            const container = document.getElementById('records-container');
+            const list = document.getElementById('records-list');
+            list.innerHTML = '';
+            
+            if (!records || records.length === 0) {
+                list.innerHTML = '<p>この日の打刻データはありません。</p>';
+                document.getElementById('btn-save').disabled = true;
+            } else {
+                records.forEach((r, idx) => {
+                    const div = document.createElement('div');
+                    div.className = 'record-item';
+                    div.innerHTML = `
+                        <div>
+                            <strong>${r.typeLabel}</strong><br>
+                            <span style="font-size:0.8rem;color:#666;">行:${r.rowNum}</span>
+                        </div>
+                        <input type="time" id="time-${idx}" value="${r.time}">
+                    `;
+                    list.appendChild(div);
+                });
+                document.getElementById('btn-save').disabled = false;
+            }
+            container.classList.remove('hidden');
+        }
+
+        async function saveRecords() {
+            if (!confirm('時間を上書きし、実働時間を再計算しますか？')) return;
+
+            const updates = [];
+            currentRecords.forEach((r, idx) => {
+                const newTime = document.getElementById(`time-${idx}`).value;
+                if (newTime && newTime !== r.time) {
+                    updates.push({ rowNum: r.rowNum, newTime: newTime });
+                }
+            });
+
+            if (updates.length === 0) return alert('変更された時間はありません');
+
+            const dateStr = document.getElementById('search-date').value.replace(/-/g, '/');
+            const staffId = document.getElementById('search-staff').value;
+
+            const btn = document.getElementById('btn-save');
+            btn.disabled = true;
+            btn.textContent = '保存中...';
+
+            try {
+                const res = await callGasPost('updatePunchTime', { staffId, date: dateStr, updates });
+                if (res.error) throw new Error(res.error);
+                
+                alert('修正と再計算が完了しました！');
+                fetchRecords(); // 再取得
+            } catch (e) {
+                alert('保存エラー: ' + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '修正を保存して再計算';
+            }
+        }
+    </script>
+</body>
+</html>
